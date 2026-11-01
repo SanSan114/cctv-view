@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32-CAM Live Stream</title>
+    <!-- Library Paho MQTT Client via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
+        h2 { margin-bottom: 15px; }
+        .container { max-width: 500px; margin: 0 auto; background: #1e293b; padding: 15px; border-radius: 10px; }
+        img { width: 100%; height: auto; border-radius: 8px; background: #334155; }
+        .status { margin-top: 10px; font-size: 14px; color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>CCTV ESP32-CAM (MQTT)</h2>
+        <img id="cctv-frame" src="" alt="Menunggu Frame dari Kamera..." />
+        <p class="status" id="status-text">Status: Menghubungkan ke Broker...</p>
+    </div>
+
+    <script>
+        // TOPIC UNIK (Harus sama persis dengan yang diisi di ESP32-CAM)
+        const mqttTopic = "ihsan/cctv/stream/v1"; 
+
+        const clientID = "web_client_" + Math.random().toString(16).substr(2, 8);
+        const statusText = document.getElementById("status-text");
+        const imgElement = document.getElementById("cctv-frame");
+
+        // Hubungkan ke HiveMQ Public WebSocket (SSL Port 8884)
+        const client = new Paho.MQTT.Client("broker.hivemq.com", 8884, clientID);
+
+        client.onConnectionLost = function (responseObject) {
+            statusText.innerText = "Status: Terputus dari Broker!";
+        };
+
+        client.onMessageArrived = function (message) {
+            // Ubah string Base64 yang diterima menjadi image source
+            imgElement.src = "data:image/jpeg;base64," + message.payloadString;
+            statusText.innerText = "Status: Live (Menerima Frame)";
+        };
+
+        client.connect({
+            useSSL: true,
+            onSuccess: function () {
+                statusText.innerText = "Status: Terhubung! Menunggu Kamera...";
+                client.subscribe(mqttTopic);
+            },
+            onFailure: function (message) {
+                statusText.innerText = "Status: Gagal Terhubung ke Broker";
+            }
+        });
+    </script>
+</body>
+</html>
